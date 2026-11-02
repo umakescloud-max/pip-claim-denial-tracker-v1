@@ -1,0 +1,74 @@
+[
+  {
+    "id": "meet-joaquin",
+    "screen_id": "story",
+    "route": "/",
+    "target": "story-panel",
+    "title": "Meet Joaquin",
+    "body": "Joaquin works every PIP claim for a 4-clinic injury practice, from submission to payment or handoff. Here is his Monday before and after this tracker."
+  },
+  {
+    "id": "all-claims",
+    "screen_id": "claims",
+    "route": "/claims",
+    "target": "tracker-table",
+    "title": "Every claim in one list",
+    "body": "Carrier, date of service, billed and paid amounts, benefits used and status for every PIP claim, newest first. Click a row to open the claim."
+  },
+  {
+    "id": "claim-history",
+    "screen_id": "claim",
+    "route": "/claim",
+    "target": "claim-timeline",
+    "title": "The claim history",
+    "body": "Each submission, EOB, adjuster call and payment in order, with the next follow-up date, so nothing depends on memory."
+  },
+  {
+    "id": "exhaustion-flagged",
+    "screen_id": "denials",
+    "route": "/denials",
+    "target": "denial-row-5208",
+    "title": "An exhaustion notice that does not add up",
+    "body": "The carrier says benefits are used up on claim 5208, but its own payments total $8,140 of a $10,000 limit. The tracker flags it instead of passing it to the LOP side."
+  },
+  {
+    "id": "appeal-countdown",
+    "screen_id": "denials",
+    "route": "/denials",
+    "target": "appeal-countdown",
+    "title": "Days left to dispute",
+    "body": "The countdown shows how long until the appeal deadline, so the claim closest to being lost is worked first."
+  },
+  {
+    "id": "human-review",
+    "screen_id": "appeals",
+    "route": "/appeals",
+    "target": "approval-queue-item",
+    "title": "Joaquin approves, then the adjuster hears",
+    "body": "No reconsideration goes to a carrier and no balance moves to the LOP coordinator until Joaquin approves it."
+  },
+  {
+    "id": "billing-metrics",
+    "screen_id": "claims",
+    "route": "/claims",
+    "target": "claims-metrics",
+    "title": "How billing is doing",
+    "body": "First-pass acceptance, deadlines this week, A/R over 90 days and LOP handoffs, worked out from the claims themselves."
+  },
+  {
+    "id": "what-it-costs",
+    "screen_id": "costs",
+    "route": "/costs",
+    "target": "savings-calculator",
+    "title": "What this work costs today",
+    "body": "Put in your own claim volume and billing rate to compare today's cost with the tracker."
+  },
+  {
+    "id": "how-it-works",
+    "screen_id": "architecture",
+    "route": "/architecture",
+    "target": "architecture-diagram",
+    "title": "How it would be built",
+    "body": "Click any box to see what it does, what data passes through it and whether it stores patient data. EOBs come in from the clearinghouse and carrier portals; a real build runs in the practice's own cloud."
+  }
+]
