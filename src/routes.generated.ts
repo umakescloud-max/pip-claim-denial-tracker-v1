@@ -3,8 +3,10 @@ export const routes: { id: string; path: string }[] = [
   { id: "story", path: "/" },
   { id: "claims", path: "/claims" },
   { id: "claim", path: "/claim" },
+  { id: "follow-up", path: "/follow-up" },
   { id: "denials", path: "/denials" },
   { id: "appeals", path: "/appeals" },
+  { id: "ledgers", path: "/ledgers" },
   { id: "costs", path: "/costs" },
   { id: "architecture", path: "/architecture" },
 ];

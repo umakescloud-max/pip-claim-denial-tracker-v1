@@ -40,6 +40,14 @@
     "body": "The countdown shows how long until the appeal deadline, so the claim closest to being lost is worked first."
   },
   {
+    "id": "reduction-to-physician",
+    "screen_id": "ledgers",
+    "route": "/ledgers",
+    "target": "reduction-row-3312",
+    "title": "A reduction the physician decides",
+    "body": "Case 3312 reached MMI and the attorney asks to settle the $4,620 balance for $3,000. The final ledger is already prepared; nothing is agreed until Dr. Castell approves the reduction."
+  },
+  {
     "id": "human-review",
     "screen_id": "appeals",
     "route": "/appeals",
@@ -69,6 +77,6 @@
     "route": "/architecture",
     "target": "architecture-diagram",
     "title": "How it would be built",
-    "body": "Click any box to see what it does, what data passes through it and whether it stores patient data. EOBs come in from the clearinghouse and carrier portals; a real build runs in the practice's own cloud."
+    "body": "Click any box to see what it does, what data passes through it and whether it stores patient data. Claims and remittances come from the practice's billing system and clearinghouse; a real build runs in the practice's own cloud."
   }
 ]

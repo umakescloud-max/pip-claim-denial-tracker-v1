@@ -1,15 +1,17 @@
-A carrier says PIP benefits are exhausted, and the balance goes to the LOP without anyone adding up what was paid.
+Denied and unpaid PIP balances slip when the follow-up list lives in a spreadsheet and the MMI ledger is built by hand.
 
-I built a concept prototype of a PIP claim and denial tracker for injury practices. Every claim sits in one list with its carrier, status and benefits used against the limit.
+I built a new piece for our PIP claim and denial tracker, a prototype for injury practices.
 
-Denials are sorted by reason, with a countdown to the appeal deadline. In the demo, claim 5208 is flagged: the carrier says exhausted, but its own payments total $8,140 of a $10,000 limit. That is $1,860 still on the PIP side, with 4 days left to dispute.
+A Follow-up queue lists every denied, underpaid and records-requested claim, plus pending claims with no payment after 30 days, sorted by next follow-up date. Confirm carrier receipt or set the next follow-up in one click.
 
-The billing lead attaches the payment history, moves it to review and approves the reconsideration. Nothing reaches an adjuster or the LOP coordinator without that click.
+When a patient reaches MMI, the tracker prepares the final itemized bill and ledger from the PIP claims and payments.
+
+Attorney reduction requests wait for the physician. In the demo, a law firm asks to settle a $4,620 balance for $3,000. The request goes to the physician with the verified balance and final ledger, and nothing is agreed until the physician approves.
 
 Try it:
 https://umakescloud-max.github.io/pip-claim-denial-tracker-v1/
 
-This is a concept prototype with synthetic data. A real build runs on the practice's own cloud, HIPAA-ready, and the practice owns it.
+This is a concept prototype with synthetic data. A real build runs on your own cloud, HIPAA-ready, and you own it.
 
 If your team fights this every week, book a free workflow audit at umakes.cloud or reply to umakescloud@gmail.com.
 

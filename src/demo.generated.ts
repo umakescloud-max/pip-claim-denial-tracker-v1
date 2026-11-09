@@ -3,7 +3,7 @@ import type { DemoConfig } from "@kit";
 import { SAMPLE_MANIFEST } from "./samples.generated";
 
 export const DEMO_CONFIG: DemoConfig = { ...{
-  "storageKey": "pip-claim-denial-tracker-v1-b9",
+  "storageKey": "pip-claim-denial-tracker-v1-b12",
   "ctaUrl": "https://umakes.cloud",
   "galleryUrl": "https://umakescloud-max.github.io/",
   "tasks": [
@@ -26,6 +26,16 @@ export const DEMO_CONFIG: DemoConfig = { ...{
       "tour_step_ids": [
         "exhaustion-flagged",
         "appeal-countdown"
+      ]
+    },
+    {
+      "id": "send-reduction",
+      "title": "Send a reduction to the physician",
+      "instruction": "On Ledgers at MMI, open case 3312 and click Send reduction to Dr. Castell. You can use the sample document.",
+      "screen_id": "ledgers",
+      "completes_on": "send-reduction-to-physician",
+      "tour_step_ids": [
+        "reduction-to-physician"
       ]
     },
     {
@@ -63,7 +73,8 @@ export const DEMO_CONFIG: DemoConfig = { ...{
       "cpt_codes",
       "adjuster_name",
       "billed_amount",
-      "paid_amount"
+      "paid_amount",
+      "physician_note"
     ]
   },
   "samples": [
@@ -75,6 +86,15 @@ export const DEMO_CONFIG: DemoConfig = { ...{
       "record_id": "5208",
       "result": "Read the payment history: $8,140 paid of a $10,000 limit, $1,860 left. Matched to claim 5208; the exhaustion denial is marked as disputable.",
       "completes_on": "attach-payment-history"
+    },
+    {
+      "id": "reduction-request-3312",
+      "title": "Attorney reduction request, case 3312",
+      "kind": "letter",
+      "screen_id": "ledgers",
+      "record_id": "3312",
+      "result": "Read the reduction request: Marrow Creek Trial Lawyers asks to settle case 3312's $4,620 balance for $3,000. Matched to the verified ledger and sent to Dr. Castell for approval.",
+      "completes_on": "send-reduction-to-physician"
     }
   ],
   "costs": {

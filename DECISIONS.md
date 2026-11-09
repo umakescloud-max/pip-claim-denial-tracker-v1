@@ -1,9 +1,14 @@
 # Decisions
-- Countdowns use business days (kit `businessDaysBetween`); claim 5208's appeal deadline is 4 business days out, and every seeded deadline falls on a business day.
-- Moving a denial to review does not change its claim_status; only the approval on Review (the human checkpoint) does. The Denials row shows a separate "Waiting for approval" pill meanwhile.
-- The Review queue opens with two underpaid reconsiderations and two exhausted-benefit handoffs, so it is never empty on a fresh visit; claim 5208 joins at the top only after the visitor moves it.
-- The "Attach carrier payment history" button appears only in claim 5208's drawer, because its toast names claim 5208. Using the sample document also counts as attaching it.
-- Shared hooks and constants live in src/screens/claimState.ts (.ts, so App.tsx's screens glob does not route it).
-- Visitor changes are stored as overlays in useDemoState (status changes, review queue, added contacts) with numeric timestamps, so the kit's ISO-date reviver cannot turn them into Date objects.
-- IntegrationTiles on How it works lists what the tracker replaces (the brief names no tools).
-- Each claim has its own case_id and adjuster; claims do not share a case.
+- Archetype roles: claims = tracker (DataTable dataTour "tracker-table"), claim = case (Timeline "claim-timeline"), denials DataTable dataTour "denial", appeals ApprovalQueue dataTour "approval-queue"; ledgers DataTable dataTour "reduction" so case 3312's row is "reduction-row-3312".
+- Shared screen helpers live in src/screens/lib.ts (a .ts file, so App.tsx's *.tsx glob never registers it as a screen).
+- Countdowns use calendar days (appeal windows are calendar days; matches the brief's "4 days"), computed from appeal_deadline and today.
+- Ledgers: the action buttons sit in an always-visible "Open case" panel (defaults to case 3312) so they are on the page at load; the row-click drawer shows the itemized bill, payments and reduction request.
+- Follow-up: "Confirm carrier receipt" and "Set next follow-up date" live in the row drawer, as the brief describes.
+- "Attach carrier payment history" shows only on the flagged exhaustion claim, because its toast names claim 5208.
+- "Use a sample document" counts as the matching action: on Denials it marks 5208's payment history attached, on Ledgers it sends 3312's reduction to Dr. Castell (derived from the audit log entry the kit writes).
+- Review queue: every item offers both decisions (approve and send to adjuster, or hand to LOP); seeded with two true exhaustions and one modifier reconsideration so the queue is never empty on load; items moved from Denials go to the top.
+- The kit CPT catalog has no new/follow-up visit or manual therapy codes, so claims use only its codes (97110, 72148, 64483, 73030, 20610) with the kit labels. Diagnosis codes are the four the brief names, with plain labels.
+- Claims link to cases outside 3300-3335; MMI ledgers carry their own itemized lines generated from their visit count and totals.
+- IntegrationTiles shows Office Ally and Practice Mate without excludeLabels so the component is visible on How it works.
+- index.html's page title still reads "Prior auth tracker"; that file is outside what the builder may edit.
+- React Router v7 future-flag console warnings come from the fixed main.tsx HashRouter; they are warnings, not errors.

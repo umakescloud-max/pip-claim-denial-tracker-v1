@@ -1,170 +1,147 @@
-import { useState } from "react";
-import { AppShell, ApprovalQueue, AuditLog, DocumentViewer, TourRunner, formatDate, useActivity, type ApprovalItem } from "@kit";
+import { useMemo } from "react";
+import { Link } from "react-router-dom";
+import { ApprovalQueue, AppShell, AuditLog, DocumentViewer, rel, useActivity, useDemo, useDemoState, type ApprovalItem } from "@kit";
 import { NAV } from "../nav";
-import tour from "../tour.json";
-import { CPT_LABELS, EDGE_CASE_ID, REASONS, type ReviewItem } from "../seed";
-import { contactsFor, isLoggedIn, money, SHELL, useClaims, type AddedContact, type LiveClaim } from "./claimState";
-
-function reconsiderationLetter(c: LiveClaim): string[] {
-  const opening = `To the claims adjuster at ${c.carrier}:`;
-  const re = `Re: claim ${c.claim_number}, patient ${c.patient_name}, date of loss ${formatDate(c.date_of_loss)}`;
-  const services = `${c.visits} ${c.visits === 1 ? "visit" : "visits"} (${c.cpt_codes.map((code) => CPT_LABELS[code].toLowerCase()).join(", ")})`;
-  const notice = c.eob_date ? formatDate(c.eob_date) : "recently";
-  let body: string[];
-  if (c.claim_id === EDGE_CASE_ID) {
-    body = [
-      `Your notice dated ${notice} denies payment of ${money(c.billed_amount)} for ${c.visits} physical therapy visits on the grounds that PIP benefits are exhausted.`,
-      `Your own payment history on this claim shows ${money(c.benefits_paid_to_date)} paid against a ${money(c.benefit_limit)} benefit limit, leaving ${money(c.benefit_limit - c.benefits_paid_to_date)}.`,
-      `We ask that you reconsider the denial and pay the billed visits from the remaining benefit.`,
-      c.payment_history_attached
-        ? "Attached: your payment history on this claim, the itemized bill and the treating records."
-        : "Attached: the itemized bill and the treating records. Your payment history is not attached yet.",
-    ];
-  } else if (c.denial_reason === REASONS.underpaid) {
-    body = [
-      `Your EOB dated ${notice} paid ${money(c.paid_amount)} of ${money(c.billed_amount)} billed for ${services}, below the fee schedule.`,
-      `We ask that you reconsider and pay the remaining ${money(c.billed_amount - c.paid_amount)}.`,
-      "Attached: the itemized bill and the fee schedule amounts for each code.",
-    ];
-  } else if (c.denial_reason === REASONS.records) {
-    body = [
-      `Your notice dated ${notice} asks for the treating records for ${services}.`,
-      `The records are attached. We ask that you process the ${money(c.billed_amount)} billed.`,
-    ];
-  } else {
-    body = [
-      `Your notice dated ${notice} denies ${money(c.billed_amount)} for ${services}: ${c.denial_reason?.toLowerCase()}.`,
-      "The corrected claim is attached. We ask that you reprocess it.",
-    ];
-  }
-  return [re, opening, ...body, "Joaquin Reyes, PI billing lead, Larkfield Injury & Spine Group"];
-}
-
-function handoffSummary(c: LiveClaim, added: AddedContact[]): string[] {
-  const contacts = contactsFor(c.claim_id, added);
-  return [
-    "To Marcus Odum, lien and LOP coordinator",
-    `Claim ${c.claim_id}, ${c.patient_name}, ${c.carrier}, claim ${c.claim_number}`,
-    `Referring firm: ${c.referring_firm}`,
-    `Benefits used: ${money(c.benefits_paid_to_date)} of the ${money(c.benefit_limit)} limit`,
-    `Balance to move to the letter of protection: ${money(c.billed_amount - c.paid_amount)}`,
-    `History attached: submitted ${c.submitted_date ? formatDate(c.submitted_date) : "not yet"}, carrier notice ${c.eob_date ? formatDate(c.eob_date) : "not yet"}, ${contacts.length} adjuster ${contacts.length === 1 ? "contact" : "contacts"}`,
-  ];
-}
+import { BILLING_LEAD, CLAIMS, CONTACTS, EDGE_CLAIM_ID, EDGE_LABEL, EDGE_PAYMENTS, LOP_COORDINATOR, type Claim, type Contact } from "../seed";
+import { SHELL, daysLeftText, headingStyle, money, shortDate } from "./lib";
 
 export default function Appeals() {
-  const { logAction } = useActivity();
-  const { byId, queue, setQueue, update, added, addContact } = useClaims();
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const { logAction, auditLog } = useActivity();
+  const { config } = useDemo();
+  const [claims, setClaims] = useDemoState<Claim[]>("claims", CLAIMS);
+  const [contacts, setContacts] = useDemoState<Contact[]>("contacts", CONTACTS);
 
-  const entries = queue.map((q) => ({ q, c: byId.get(q.claim_id)! })).filter((e) => e.c);
-  const items: ApprovalItem[] = entries.map(({ q, c }) => ({
-    id: c.claim_id,
-    title:
-      q.kind === "reconsideration"
-        ? `Claim ${c.claim_id}: reconsideration to ${c.carrier}`
-        : `Claim ${c.claim_id}: hand ${money(c.billed_amount - c.paid_amount)} to the LOP coordinator`,
-    subtitle: `${c.patient_name}, ${c.denial_reason}. Benefits used ${money(c.benefits_paid_to_date)} of ${money(c.benefit_limit)}.`,
-    edgeCase: c.claim_id === EDGE_CASE_ID,
-  }));
-  const selected = entries.find((e) => e.c.claim_id === selectedId) ?? entries[0];
+  const queue = useMemo(
+    () => claims.filter((c) => c.review).sort((a, b) => (b.review_since?.getTime() ?? 0) - (a.review_since?.getTime() ?? 0)),
+    [claims]
+  );
+  const edge = claims.find((c) => c.claim_id === EDGE_CLAIM_ID)!;
+  const sampleTitle = config.samples.find((s) => s.record_id === EDGE_CLAIM_ID)?.title;
+  const edgeHistory = edge.payment_history_attached || (!!sampleTitle && auditLog.some((e) => e.text === `Read sample: ${sampleTitle}`));
+  const top = queue[0];
 
-  const resolve = (item: ApprovalItem) => setQueue((prev: ReviewItem[]) => prev.filter((q) => q.claim_id !== item.id));
+  const items: ApprovalItem[] = queue.map((c) => {
+    const left = c.benefit_limit - c.benefits_paid_to_date;
+    return c.review === "reconsideration"
+      ? {
+          id: c.claim_id,
+          title: `Claim ${c.claim_id}, ${c.patient_name}: reconsideration to ${c.carrier}`,
+          subtitle: `${c.denial_reason}. ${money(c.benefits_paid_to_date)} paid of ${money(c.benefit_limit)}, ${money(left)} left.${c.appeal_deadline ? ` Appeal deadline ${shortDate(c.appeal_deadline)}, ${daysLeftText(c.appeal_deadline).toLowerCase()}.` : ""}`,
+          edgeCase: c.claim_id === EDGE_CLAIM_ID,
+        }
+      : {
+          id: c.claim_id,
+          title: `Claim ${c.claim_id}, ${c.patient_name}: hand ${money(c.billed_amount - c.paid_amount)} to ${LOP_COORDINATOR}`,
+          subtitle: `${c.carrier} says benefits are used up, and its payments do reach the limit: ${money(c.benefits_paid_to_date)} of ${money(c.benefit_limit)}. Referred by ${c.referring_firm}.`,
+          edgeCase: c.claim_id === EDGE_CLAIM_ID,
+        };
+  });
 
-  const approve = (item: ApprovalItem) => {
-    update(item.id, { claim_status: "In reconsideration" });
-    addContact({
-      claim_id: item.id,
-      at: Date.now(),
-      contact_by: "Joaquin Reyes",
-      channel: "Fax",
-      outcome: "Reconsideration letter sent to the adjuster",
-      next_action_at: Date.now() + 7 * 86_400_000,
-    });
-    resolve(item);
-    logAction("Reconsideration approved and sent to the adjuster", "approve-and-send-reconsideration");
+  const decide = (id: string, patch: Partial<Claim>, outcome: string) => {
+    const now = new Date();
+    setClaims((prev) => prev.map((c) => (c.claim_id === id ? { ...c, ...patch, review: null, review_since: null } : c)));
+    setContacts((prev) => [
+      ...prev,
+      { id: `review-${now.getTime()}`, claim_id: id, contact_date: now, contact_by: BILLING_LEAD, channel: "Fax", outcome, next_action_date: rel(10) },
+    ]);
   };
 
-  const handToLop = (item: ApprovalItem) => {
-    update(item.id, { claim_status: "Handed to LOP" });
-    addContact({
-      claim_id: item.id,
-      at: Date.now(),
-      contact_by: "Joaquin Reyes",
-      channel: "Handoff",
-      outcome: "Balance and full claim history sent to Marcus Odum",
-      next_action_at: null,
-    });
-    resolve(item);
-    logAction("Balance handed to the LOP coordinator with claim history", "hand-to-lop");
+  const letter = (c: Claim): string[] => {
+    const attached = c.claim_id === EDGE_CLAIM_ID ? edgeHistory : c.payment_history_attached;
+    const left = c.benefit_limit - c.benefits_paid_to_date;
+    if (c.review === "lop-handoff")
+      return [
+        `To: ${LOP_COORDINATOR}, lien and LOP coordinator`,
+        `Patient ${c.patient_name}, case ${c.case_id}, referred by ${c.referring_firm}`,
+        `Balance to carry on the LOP: ${money(c.billed_amount - c.paid_amount)}`,
+        `${c.carrier} paid ${money(c.benefits_paid_to_date)} of the ${money(c.benefit_limit)} PIP limit, so the exhaustion notice checks out.`,
+        `Claim history attached: submission, EOBs, ${contacts.filter((x) => x.claim_id === c.claim_id).length} adjuster contacts and payments posted.`,
+      ];
+    return [
+      `To: the claims adjuster, ${c.carrier}`,
+      `Re: carrier claim ${c.claim_number}, patient ${c.patient_name}, date of loss ${shortDate(c.date_of_loss)}`,
+      c.claim_id === EDGE_CLAIM_ID
+        ? `We ask you to reconsider the denial of ${c.visits} physical therapy visits billed at ${money(c.billed_amount)} as benefits exhausted.`
+        : `We ask you to reconsider the denial for ${c.denial_reason?.toLowerCase()} on ${money(c.billed_amount)} billed.`,
+      c.denial_reason === EDGE_LABEL
+        ? `Your own payment history shows ${money(c.benefits_paid_to_date)} paid against the ${money(c.benefit_limit)} PIP limit, leaving ${money(left)}. The ${money(c.billed_amount)} billed fits within what is left.`
+        : "The corrected claim and the itemized bill are attached.",
+      attached ? "Attached: your payment history on this claim." : "Not attached yet: the carrier's payment history.",
+      `Prepared for ${BILLING_LEAD}, PI billing lead, Larkfield Injury & Spine Group`,
+    ];
   };
 
   return (
     <AppShell {...SHELL} nav={NAV}>
-      <h1 className="text-3xl" style={{ fontFamily: "var(--pf-font-heading)" }}>Review</h1>
+      <h1 className="text-2xl" style={headingStyle}>Review</h1>
       <p className="mt-2 max-w-2xl text-[var(--pf-muted)]">
-        Nothing reaches a carrier and no balance moves to the LOP coordinator until you approve it here. Read the
-        letter, check the benefits used against the limit, then decide.
+        Reconsiderations and exhausted-benefit handoffs wait here for your approval. Nothing goes to a carrier's adjuster or to{" "}
+        {LOP_COORDINATOR} until you click.
       </p>
+      {!edge.review && edge.claim_status === "denied" && (
+        <p className="mt-4 max-w-2xl rounded-lg bg-[var(--pf-accent)]/40 px-3 py-2 text-sm">
+          Claim {EDGE_CLAIM_ID} shows up here once you move it to reconsideration review.{" "}
+          <Link to="/denials" className="underline">Open it on Denials</Link>
+        </p>
+      )}
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <section>
-          <h2 className="text-lg" style={{ fontFamily: "var(--pf-font-heading)" }}>Waiting for your approval</h2>
-          <p className="text-sm text-[var(--pf-muted)]">
-            {items.length === 0 ? "Nothing is waiting. Move a denial here from Denials." : `${items.length} waiting`}
-          </p>
-          <div className="mt-3">
-            <ApprovalQueue
-              items={items}
-              dataTour="approval-queue"
-              primaryLabel="Approve and send to adjuster"
-              secondaryLabel="Hand balance to LOP coordinator"
-              primaryActionId="approve-and-send-reconsideration"
-              secondaryActionId="hand-to-lop"
-              onPrimary={approve}
-              onSecondary={handToLop}
-            />
+      <div className="mt-6 grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+        <section className="min-w-0">
+          <h2 className="text-lg" style={headingStyle}>Waiting for your approval ({queue.length})</h2>
+          <div className="mt-4">
+            {items.length > 0 ? (
+              <ApprovalQueue
+                items={items}
+                dataTour="approval-queue"
+                primaryLabel="Approve and send to adjuster"
+                secondaryLabel="Hand balance to LOP coordinator"
+                primaryActionId="approve-and-send-reconsideration"
+                secondaryActionId="hand-to-lop"
+                onPrimary={(item) => {
+                  decide(item.id, { claim_status: "in reconsideration", next_follow_up: rel(10) }, "Reconsideration sent to adjuster");
+                  logAction("Reconsideration approved and sent to the adjuster", "approve-and-send-reconsideration");
+                }}
+                onSecondary={(item) => {
+                  decide(item.id, { claim_status: "handed to LOP", next_follow_up: null }, `Balance and claim history sent to ${LOP_COORDINATOR}`);
+                  logAction("Balance handed to the LOP coordinator with claim history", "hand-to-lop");
+                }}
+              />
+            ) : (
+              <p className="text-sm text-[var(--pf-muted)]">Nothing is waiting. Claims you move to reconsideration review on Denials land here.</p>
+            )}
           </div>
         </section>
 
-        {selected && (
-          <section>
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="text-[var(--pf-muted)]">Letter shown</span>
-              <select
-                value={selected.c.claim_id}
-                onChange={(e) => setSelectedId(e.target.value)}
-                className="min-h-[44px] rounded-lg border border-[var(--pf-muted)]/30 bg-[var(--pf-surface)] px-3"
-              >
-                {entries.map(({ q, c }) => (
-                  <option key={c.claim_id} value={c.claim_id}>
-                    Claim {c.claim_id}, {q.kind === "reconsideration" ? "reconsideration letter" : "LOP handoff"}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <div className="mt-3">
+        <section className="min-w-0 space-y-4">
+          <h2 className="text-lg" style={headingStyle}>{top ? `Read before you approve: claim ${top.claim_id}` : "Read before you approve"}</h2>
+          {top ? (
+            <>
               <DocumentViewer
-                title={
-                  selected.q.kind === "reconsideration"
-                    ? `Drafted reconsideration, claim ${selected.c.claim_id}`
-                    : `LOP handoff summary, claim ${selected.c.claim_id}`
-                }
-                field="billed_amount"
-                lines={selected.q.kind === "reconsideration" ? reconsiderationLetter(selected.c) : handoffSummary(selected.c, added)}
+                title={top.review === "lop-handoff" ? `Handoff to ${LOP_COORDINATOR}, claim ${top.claim_id}` : `Drafted reconsideration letter, claim ${top.claim_id}`}
+                lines={letter(top)}
               />
+              {top.denial_reason === EDGE_LABEL && (
+                <DocumentViewer
+                  title={`Carrier payment history, claim ${top.claim_id}`}
+                  missing={!edgeHistory}
+                  lines={[
+                    ...EDGE_PAYMENTS.map((p) => `${shortDate(p.date)}: ${money(p.amount)}, ${p.covers.toLowerCase()}`),
+                    `Paid to date ${money(top.benefits_paid_to_date)} of ${money(top.benefit_limit)}, ${money(top.benefit_limit - top.benefits_paid_to_date)} left`,
+                  ]}
+                />
+              )}
+            </>
+          ) : (
+            <p className="text-sm text-[var(--pf-muted)]">The letter for the item at the top of the queue shows here.</p>
+          )}
+          <div>
+            <h2 className="text-lg" style={headingStyle}>What has been decided</h2>
+            <div className="mt-3">
+              <AuditLog />
             </div>
-          </section>
-        )}
+          </div>
+        </section>
       </div>
-
-      <section className="mt-10 max-w-3xl">
-        <h2 className="text-lg" style={{ fontFamily: "var(--pf-font-heading)" }}>Activity in this demo</h2>
-        <div className="mt-3">
-          <AuditLog />
-        </div>
-      </section>
-      {isLoggedIn() && <TourRunner steps={tour} storageKey="pf-tour-pip-claim-denial-tracker-v1" />}
     </AppShell>
   );
 }
